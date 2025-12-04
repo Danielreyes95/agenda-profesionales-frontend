@@ -110,11 +110,13 @@
     AgendaProfesionales &copy; 2025 — Proyecto en desarrollo
   </footer>
 
-  <!-- 👇 NUEVO: config global -->
-  <script src="/js/config.js"></script>
+  <!-- Config global de API (adaptativo local / GitHub Pages) -->
+  <script src="js/config.js"></script>
 
   <script>
-    const BASE_URL = window.API_BASE_URL;;
+    // Usa la URL del backend definida en config.js, o cae al origen actual (útil en local)
+    const BASE_URL = window.API_BASE_URL || window.location.origin;
+
     const msgProfesionales = document.getElementById("msgProfesionales");
     const listaProfesionales = document.getElementById("listaProfesionales");
     const buscarProf = document.getElementById("buscarProf");
