@@ -35,7 +35,7 @@
 
       // Si no hay sesión, ir al login
       if (!token || !usuarioRaw) {
-        window.location.href = "/login.html";
+        window.location.href = "login.html";
       }
 
       const usuario = JSON.parse(usuarioRaw);
@@ -393,7 +393,7 @@
 
     // Volver al panel
     btnVolverPanel.addEventListener("click", () => {
-      window.location.href = "/panel-profesional.html";
+      window.location.href = "panel-profesional.html";
     });
 
     // Al cargar la página, traer horarios

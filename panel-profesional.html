@@ -44,7 +44,7 @@
 
       // Si no hay sesión, ir al login
       if (!token || !usuarioRaw) {
-        window.location.href = "/login.html";
+        window.location.href = "login.html";
       }
 
       const usuario = JSON.parse(usuarioRaw);
@@ -467,12 +467,12 @@
     // Cerrar sesión
     btnLogout.addEventListener("click", () => {
       localStorage.clear();
-      window.location.href = "/login.html";
+      window.location.href = "login.html";
     });
 
     // Ir a pantalla de horarios
     btnHorarios.addEventListener("click", () => {
-      window.location.href = "/horarios-profesional.html";
+      window.location.href = "horarios-profesional.html";
     });
 
     // Copiar link público
