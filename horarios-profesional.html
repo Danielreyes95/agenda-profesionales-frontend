@@ -28,8 +28,6 @@
     </p>
 
     <script>
-      const BASE_URL = window.location.origin;
-
       const token = localStorage.getItem("token");
       const usuarioRaw = localStorage.getItem("usuario");
 
@@ -157,7 +155,13 @@
     </section>
   </div>
 
+  <!-- Config API -->
+  <script src="js/config.js"></script>
+
   <script>
+    const BASE_URL = window.API_BASE_URL || window.location.origin;
+    console.log("API_BASE_URL (horarios) =", BASE_URL);
+
     const diaSemanaSelect = document.getElementById("diaSemana");
     const fechaEspecificaInput = document.getElementById("fechaEspecifica");
     const campoDiaSemana = document.getElementById("campoDiaSemana");
@@ -244,15 +248,13 @@
           // Si tiene fechaEspecifica → mostramos fecha; si no, día de semana
           let textoDia;
           if (h.fechaEspecifica) {
-            // ⏰ Horario puntual por fecha
             textoDia = `${formatearFechaDDMMYYYY(h.fechaEspecifica)}`;
           } else if (typeof h.diaSemana === "number") {
-            // 📅 Horario semanal (por día de la semana)
             textoDia = nombreDia(h.diaSemana);
           } else {
-            // Por si quedó algún registro raro con ambos en null
             textoDia = "Sin día / fecha";
           }
+
           const duracionMostrar = h.duracionBloque ?? h.duracionMinutos ?? "";
 
           tr.innerHTML = `

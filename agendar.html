@@ -191,7 +191,7 @@
 
           <button id="btnNext"
                   class="px-3 py-1 rounded border text-sm text-gray-600 hover:bg-gray-100">
-            Siguientes 2 semanas →
+            Siguientes 2 semanas → 
           </button>
         </div>
       </div>
@@ -311,7 +311,10 @@
   <script src="js/config.js"></script>
 
   <script>
-    const BASE_URL = window.API_BASE_URL;
+    // 👉 Usamos API_BASE_URL (Render) con fallback a origin para desarrollo local
+    const BASE_URL = window.API_BASE_URL || window.location.origin;
+    console.log("API_BASE_URL (agendar) =", BASE_URL);
+
     const fechaInput = document.getElementById("fecha");
     const formCita = document.getElementById("formCita");
     const inputFecha = document.getElementById("inputFecha");

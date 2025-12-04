@@ -116,6 +116,7 @@
   <script>
     // Usa la URL del backend definida en config.js, o cae al origen actual (útil en local)
     const BASE_URL = window.API_BASE_URL || window.location.origin;
+    console.log("API_BASE_URL (index) =", BASE_URL);
 
     const msgProfesionales = document.getElementById("msgProfesionales");
     const listaProfesionales = document.getElementById("listaProfesionales");
@@ -201,6 +202,14 @@
 
       try {
         const res = await fetch(`${BASE_URL}/profesionales`);
+
+        // 👇 Evita "Unexpected token '<'" si el backend devuelve HTML por error
+        if (!res.ok) {
+          const text = await res.text();
+          console.error("Error HTTP /profesionales:", res.status, text);
+          throw new Error("HTTP " + res.status);
+        }
+
         const profesionales = await res.json();
 
         profesionalesCache = Array.isArray(profesionales)

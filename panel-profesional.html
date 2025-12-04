@@ -34,10 +34,13 @@
       Revisa tus citas, estados de pago y asistencia.
     </p>
 
- <script src="js/config.js"></script>
+    <!-- Config global API -->
+    <script src="js/config.js"></script>
 
     <script>
-      const BASE_URL = window.API_BASE_URL;
+      // 👇 Usar API_BASE_URL (Render) con fallback a origin (para ambiente local)
+      const BASE_URL = window.API_BASE_URL || window.location.origin;
+      console.log("API_BASE_URL (panel) =", BASE_URL);
 
       const token = localStorage.getItem("token");
       const usuarioRaw = localStorage.getItem("usuario");
@@ -49,6 +52,14 @@
 
       const usuario = JSON.parse(usuarioRaw);
       const PROFESIONAL_ID = usuario.id;
+
+      // ⚠️ Construir base del front respetando el path del repo en GitHub Pages
+      function getFrontendBaseUrl() {
+        const origin = window.location.origin; // https://danielreyes95.github.io
+        const path = window.location.pathname; // /agenda-profesionales-frontend/panel-profesional.html
+        const basePath = path.replace(/\/[^\/]+$/, ""); // /agenda-profesionales-frontend
+        return origin + basePath; // https://danielreyes95.github.io/agenda-profesionales-frontend
+      }
 
       // Actualizar título con nombre y especialidad + link público
       window.addEventListener("DOMContentLoaded", () => {
@@ -63,7 +74,8 @@
 
         const inputLink = document.getElementById("inputLinkPublico");
         if (inputLink) {
-          inputLink.value = `${window.location.origin}/agendar.html?profesionalId=${PROFESIONAL_ID}`;
+          const frontBase = getFrontendBaseUrl();
+          inputLink.value = `${frontBase}/agendar.html?profesionalId=${PROFESIONAL_ID}`;
         }
       });
     </script>
