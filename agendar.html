@@ -666,16 +666,28 @@
       const formData = new FormData(formCita);
       formData.append("profesionalId", PROFESIONAL_ID);
 
-      try {
+       try {
         const res = await fetch(`${BASE_URL}/citas`, {
           method: "POST",
           body: formData,
         });
 
         if (!res.ok) {
-          const error = await res.json().catch(() => ({}));
-          console.error("Error API:", error);
-          mensaje.textContent = "No se pudo agendar la cita. Intenta nuevamente.";
+          let errorMsg = "No se pudo agendar la cita. Intenta nuevamente.";
+          try {
+            const error = await res.json();
+            console.error("Error API:", error);
+
+            if (error && error.message) {
+              errorMsg = Array.isArray(error.message)
+                ? error.message.join(", ")
+                : error.message;
+            }
+          } catch (_) {
+            console.error("No se pudo parsear el error como JSON");
+          }
+
+          mensaje.textContent = errorMsg;
           mensaje.classList.add("text-red-500");
           return;
         }
