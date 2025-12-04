@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Panel profesional - Agenda</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+
+  <div class="bg-white shadow-lg rounded-xl p-6 w-full max-w-5xl">
+    <!-- CABECERA -->
+    <div class="flex items-center justify-between mb-2">
+      <h1 id="tituloPanel" class="text-2xl font-bold text-green-700">
+        Panel de agenda
+      </h1>
+
+      <div class="flex items-center gap-2">
+        <!-- Botón para ir a horarios -->
+        <button id="btnHorarios"
+                class="text-sm bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded">
+          Configurar horarios
+        </button>
+
+        <!-- Botón cerrar sesión -->
+        <button id="btnLogout"
+                class="text-sm bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded">
+          Cerrar sesión
+        </button>
+      </div>
+    </div>
+
+    <p class="text-gray-600 mb-4">
+      Revisa tus citas, estados de pago y asistencia.
+    </p>
+
+ <script src="/js/config.js"></script>
+
+    <script>
+      const BASE_URL = window.API_BASE_URL;
+
+      const token = localStorage.getItem("token");
+      const usuarioRaw = localStorage.getItem("usuario");
+
+      // Si no hay sesión, ir al login
+      if (!token || !usuarioRaw) {
+        window.location.href = "/login.html";
+      }
+
+      const usuario = JSON.parse(usuarioRaw);
+      const PROFESIONAL_ID = usuario.id;
+
+      // Actualizar título con nombre y especialidad + link público
+      window.addEventListener("DOMContentLoaded", () => {
+        const titulo = document.getElementById("tituloPanel");
+        if (titulo && usuario.nombre) {
+          let texto = `Panel de agenda - ${usuario.nombre}`;
+          if (usuario.especialidad) {
+            texto += ` (${usuario.especialidad})`;
+          }
+          titulo.textContent = texto;
+        }
+
+        const inputLink = document.getElementById("inputLinkPublico");
+        if (inputLink) {
+          inputLink.value = `${window.location.origin}/agendar.html?profesionalId=${PROFESIONAL_ID}`;
+        }
+      });
+    </script>
+
+    <!-- 🔗 BLOQUE LINK PÚBLICO -->
+    <div class="mb-4 p-3 bg-green-50 border border-green-100 rounded-lg flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+      <div>
+        <p class="text-sm font-semibold text-green-800">
+          Tu link público de agenda
+        </p>
+        <p class="text-xs text-green-700">
+          Comparte este enlace con tus pacientes para que reserven horas directamente contigo.
+        </p>
+      </div>
+
+      <div class="flex flex-col md:flex-row gap-2 md:items-center md:min-w-[260px]">
+        <input id="inputLinkPublico"
+               type="text"
+               readonly
+               class="border rounded-lg px-2 py-1 text-xs w-full md:w-64 bg-white" />
+        <button id="btnCopiarLink"
+                class="text-xs bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded">
+          Copiar link
+        </button>
+      </div>
+    </div>
+
+    <!-- FILTROS / MODO -->
+    <div class="flex flex-col gap-3 md:flex-row md:items-end mb-4">
+      <div class="flex items-center gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
+          <input id="fechaPanel" type="date"
+                 class="border rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500" />
+        </div>
+        <button id="btnHoy"
+                class="mt-5 bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg">
+          Hoy
+        </button>
+      </div>
+
+      <div class="flex flex-col sm:flex-row gap-2 sm:items-end md:ml-auto">
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">
+            Buscar paciente
+          </label>
+          <input id="inputBuscar" type="text"
+                 placeholder="Nombre, email o teléfono"
+                 class="border rounded-lg px-3 py-2 text-sm w-full sm:w-56" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">
+            Estado cita
+          </label>
+          <select id="selectEstado"
+                  class="border rounded-lg px-3 py-2 text-sm w-full sm:w-40">
+            <option value="">Todas</option>
+            <option value="reservada">Reservada</option>
+            <option value="realizada">Realizada</option>
+            <option value="cancelada">Cancelada</option>
+          </select>
+        </div>
+
+        <div class="flex gap-2">
+          <button id="btnModoDia"
+                  class="text-xs px-3 py-2 rounded border bg-white">
+            Por día
+          </button>
+          <button id="btnModoFuturas"
+                  class="text-xs px-3 py-2 rounded border bg-gray-100">
+            Próximas
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mensaje -->
+    <p id="msgPanel" class="text-sm mb-3"></p>
+
+    <!-- Tabla de citas -->
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm">
+        <thead>
+        <tr class="bg-gray-100 text-left">
+          <th class="px-3 py-2">Fecha</th>
+          <th class="px-3 py-2">Hora</th>
+          <th class="px-3 py-2">Cliente</th>
+          <th class="px-3 py-2">Contacto</th>
+          <th class="px-3 py-2">Pago</th>
+          <th class="px-3 py-2">Estado cita</th>
+          <th class="px-3 py-2">Acciones</th>
+        </tr>
+        </thead>
+        <tbody id="tbodyCitas">
+        <tr>
+          <td colspan="7" class="px-3 py-4 text-center text-gray-500">
+            Selecciona una fecha para ver tus citas o usa "Próximas".
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const fechaPanel = document.getElementById("fechaPanel");
+    const btnHoy = document.getElementById("btnHoy");
+    const msgPanel = document.getElementById("msgPanel");
+    const tbodyCitas = document.getElementById("tbodyCitas");
+    const btnLogout = document.getElementById("btnLogout");
+    const btnHorarios = document.getElementById("btnHorarios");
+    const inputLinkPublico = document.getElementById("inputLinkPublico");
+    const btnCopiarLink = document.getElementById("btnCopiarLink");
+    const inputBuscar = document.getElementById("inputBuscar");
+    const selectEstado = document.getElementById("selectEstado");
+    const btnModoDia = document.getElementById("btnModoDia");
+    const btnModoFuturas = document.getElementById("btnModoFuturas");
+
+    let modo = "dia"; // "dia" | "futuras"
+    let citasCache = []; // citas del modo actual
+
+    // Fecha de hoy en formato yyyy-MM-dd
+    function hoyISOsimple() {
+      const d = new Date();
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    function renderTabla(citas) {
+      if (!Array.isArray(citas) || citas.length === 0) {
+        tbodyCitas.innerHTML = `
+          <tr>
+            <td colspan="7" class="px-3 py-4 text-center text-gray-500">
+              No tienes citas para este criterio.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbodyCitas.innerHTML = "";
+
+      citas.forEach((cita) => {
+        const tr = document.createElement("tr");
+        tr.className = "border-t";
+
+        const linkComprobante = cita.comprobanteUrl
+          ? `<a href="${cita.comprobanteUrl}" target="_blank" class="text-blue-600 underline">Ver comprobante</a>`
+          : "<span class='text-gray-400'>Sin comprobante</span>";
+
+        const fechaShow = cita.fecha || "";
+
+        tr.innerHTML = `
+          <td class="px-3 py-2">${fechaShow}</td>
+          <td class="px-3 py-2">${cita.hora}</td>
+          <td class="px-3 py-2">
+            <div class="font-medium text-blue-700 cursor-pointer underline"
+                 data-historial-email="${cita.emailCliente}">
+              ${cita.nombreCliente}
+            </div>
+            <div class="text-gray-500 text-xs">${cita.comentario || ""}</div>
+          </td>
+          <td class="px-3 py-2">
+            <div class="text-xs">Tel: ${cita.telefonoCliente}</div>
+            <div class="text-xs">Email: ${cita.emailCliente}</div>
+          </td>
+          <td class="px-3 py-2">
+            <div class="text-xs font-semibold">${cita.tipoPago}</div>
+            <div class="text-xs">Estado: ${cita.estadoPago}</div>
+            <div class="mt-1 text-xs">${linkComprobante}</div>
+          </td>
+          <td class="px-3 py-2">
+            <span class="inline-block px-2 py-1 rounded-full text-xs
+              ${cita.estadoCita === 'realizada' ? 'bg-green-100 text-green-700' :
+                cita.estadoCita === 'cancelada' ? 'bg-red-100 text-red-700' :
+                'bg-yellow-100 text-yellow-700'}">
+              ${cita.estadoCita}
+            </span>
+          </td>
+          <td class="px-3 py-2 text-xs space-y-1">
+            <button class="block w-full bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded mb-1"
+                    data-accion="realizada"
+                    data-id="${cita.id}">
+              Marcar realizada
+            </button>
+            <button class="block w-full bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded mb-1"
+                    data-accion="cancelada"
+                    data-id="${cita.id}">
+              Cancelar
+            </button>
+            <button class="block w-full bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded mb-1"
+                    data-accion="pagado"
+                    data-id="${cita.id}">
+              Pago recibido
+            </button>
+          </td>
+        `;
+
+        tbodyCitas.appendChild(tr);
+      });
+    }
+
+    function aplicarFiltrosYRender() {
+      const texto = inputBuscar.value.trim().toLowerCase();
+      const estado = selectEstado.value;
+
+      let filtradas = [...citasCache];
+
+      if (texto) {
+        filtradas = filtradas.filter((c) => {
+          return (
+            (c.nombreCliente || "").toLowerCase().includes(texto) ||
+            (c.emailCliente || "").toLowerCase().includes(texto) ||
+            (c.telefonoCliente || "").toLowerCase().includes(texto)
+          );
+        });
+      }
+
+      if (estado) {
+        filtradas = filtradas.filter((c) => c.estadoCita === estado);
+      }
+
+      renderTabla(filtradas);
+    }
+
+    async function cargarCitasDia(fecha) {
+      modo = "dia";
+      msgPanel.textContent = "";
+      msgPanel.className = "text-sm mb-3";
+
+      tbodyCitas.innerHTML = `
+        <tr>
+          <td colspan="7" class="px-3 py-4 text-center text-gray-500">
+            Cargando citas...
+          </td>
+        </tr>
+      `;
+
+      try {
+        const res = await fetch(
+          `${BASE_URL}/citas/dia?profesionalId=${PROFESIONAL_ID}&fecha=${fecha}`,
+          {
+            headers: {
+              "Authorization": `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        );
+
+        const citas = await res.json();
+        citasCache = Array.isArray(citas) ? citas : [];
+        aplicarFiltrosYRender();
+      } catch (err) {
+        console.error(err);
+        tbodyCitas.innerHTML = `
+          <tr>
+            <td colspan="7" class="px-3 py-4 text-center text-red-500">
+              Error cargando citas. Intenta nuevamente.
+            </td>
+          </tr>
+        `;
+      }
+    }
+
+    async function cargarCitasFuturas() {
+      modo = "futuras";
+      msgPanel.textContent = "Cargando próximas citas...";
+      msgPanel.className = "text-sm mb-3 text-gray-600";
+
+      tbodyCitas.innerHTML = `
+        <tr>
+          <td colspan="7" class="px-3 py-4 text-center text-gray-500">
+            Cargando próximas citas...
+          </td>
+        </tr>
+      `;
+
+      try {
+        const res = await fetch(
+          `${BASE_URL}/citas/profesional/${PROFESIONAL_ID}/futuras`,
+          {
+            headers: {
+              "Authorization": `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        );
+
+        const citas = await res.json();
+        citasCache = Array.isArray(citas) ? citas : [];
+        aplicarFiltrosYRender();
+        msgPanel.textContent = "";
+      } catch (err) {
+        console.error(err);
+        msgPanel.textContent = "Error cargando próximas citas.";
+        msgPanel.className = "text-sm mb-3 text-red-500";
+      }
+    }
+
+    // Manejar clicks en la tabla (acciones + historial)
+    tbodyCitas.addEventListener("click", async (e) => {
+      // Historial paciente (click en nombre)
+      const histEl = e.target.closest("[data-historial-email]");
+      if (histEl) {
+        const email = histEl.dataset.historialEmail;
+        try {
+          const res = await fetch(
+            `${BASE_URL}/citas/profesional/${PROFESIONAL_ID}/historial-paciente?email=${encodeURIComponent(
+              email
+            )}`,
+            {
+              headers: {
+                "Authorization": `Bearer ${localStorage.getItem("token")}`,
+              },
+            }
+          );
+          const historial = await res.json();
+          const texto =
+            (Array.isArray(historial) && historial.length > 0)
+              ? historial
+                  .map(
+                    (c) =>
+                      `${c.fecha} ${c.hora} - ${c.estadoCita} (${c.tipoPago})`
+                  )
+                  .join("\n")
+              : "Sin historial adicional para este paciente.";
+          alert(texto);
+        } catch (err) {
+          console.error(err);
+          alert("Error cargando historial del paciente.");
+        }
+        return;
+      }
+
+      // Acciones sobre cita
+      const btn = e.target.closest("button[data-accion]");
+      if (!btn) return;
+
+      const accion = btn.dataset.accion;
+      const id = btn.dataset.id;
+
+      let body = {};
+      if (accion === "realizada") {
+        body.estadoCita = "realizada";
+      } else if (accion === "cancelada") {
+        body.estadoCita = "cancelada";
+      } else if (accion === "pagado") {
+        body.estadoPago = "pagado";
+      }
+
+      try {
+        const res = await fetch(`${BASE_URL}/citas/${id}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: JSON.stringify(body),
+        });
+
+        if (!res.ok) {
+          console.error("Error actualizando cita", await res.text());
+          msgPanel.textContent = "No se pudo actualizar la cita.";
+          msgPanel.className = "text-sm mb-3 text-red-500";
+          return;
+        }
+
+        msgPanel.textContent = "✅ Cita actualizada correctamente.";
+        msgPanel.className = "text-sm mb-3 text-green-600";
+
+        // Recargar según el modo actual
+        if (modo === "dia") {
+          const fecha = fechaPanel.value || hoyISOsimple();
+          cargarCitasDia(fecha);
+        } else {
+          cargarCitasFuturas();
+        }
+
+      } catch (err) {
+        console.error(err);
+        msgPanel.textContent = "Error de conexión al actualizar.";
+        msgPanel.className = "text-sm mb-3 text-red-500";
+      }
+    });
+
+    // Botón "Hoy"
+    btnHoy.addEventListener("click", () => {
+      const hoy = hoyISOsimple();
+      fechaPanel.value = hoy;
+      cargarCitasDia(hoy);
+    });
+
+    // Cambio manual de fecha
+    fechaPanel.addEventListener("change", () => {
+      if (fechaPanel.value) {
+        cargarCitasDia(fechaPanel.value);
+      }
+    });
+
+    // Cerrar sesión
+    btnLogout.addEventListener("click", () => {
+      localStorage.clear();
+      window.location.href = "/login.html";
+    });
+
+    // Ir a pantalla de horarios
+    btnHorarios.addEventListener("click", () => {
+      window.location.href = "/horarios-profesional.html";
+    });
+
+    // Copiar link público
+    if (btnCopiarLink && inputLinkPublico) {
+      btnCopiarLink.addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(inputLinkPublico.value);
+          msgPanel.textContent = "🔗 Link copiado al portapapeles.";
+          msgPanel.className = "text-sm mb-3 text-green-600";
+        } catch (err) {
+          console.error(err);
+          msgPanel.textContent =
+            "No se pudo copiar el link, cópialo manualmente.";
+          msgPanel.className = "text-sm mb-3 text-red-500";
+        }
+      });
+    }
+
+    // Modo "Por día"
+    btnModoDia.addEventListener("click", () => {
+      btnModoDia.classList.add("bg-white");
+      btnModoDia.classList.remove("bg-gray-100");
+      btnModoFuturas.classList.add("bg-gray-100");
+      btnModoFuturas.classList.remove("bg-white");
+
+      const hoy = hoyISOsimple();
+      if (!fechaPanel.value) {
+        fechaPanel.value = hoy;
+      }
+      cargarCitasDia(fechaPanel.value);
+    });
+
+    // Modo "Próximas"
+    btnModoFuturas.addEventListener("click", () => {
+      btnModoFuturas.classList.add("bg-white");
+      btnModoFuturas.classList.remove("bg-gray-100");
+      btnModoDia.classList.add("bg-gray-100");
+      btnModoDia.classList.remove("bg-white");
+
+      cargarCitasFuturas();
+    });
+
+    // Filtros
+    inputBuscar.addEventListener("input", aplicarFiltrosYRender);
+    selectEstado.addEventListener("change", aplicarFiltrosYRender);
+
+    // Al cargar la página, seleccionar hoy y modo "día"
+    window.addEventListener("DOMContentLoaded", () => {
+      const hoy = hoyISOsimple();
+      fechaPanel.value = hoy;
+      cargarCitasDia(hoy);
+    });
+  </script>
+</body>
+</html>

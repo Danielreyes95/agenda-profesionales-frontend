@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Configurar horarios - Agenda Profesionales</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+
+  <div class="bg-white shadow-lg rounded-xl p-6 w-full max-w-5xl">
+    <!-- CABECERA -->
+    <div class="flex items-center justify-between mb-2">
+      <h1 id="tituloHorarios" class="text-2xl font-bold text-green-700">
+        Configurar horarios
+      </h1>
+
+      <button id="btnVolverPanel"
+              class="text-sm bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1 rounded">
+        ← Volver al panel
+      </button>
+    </div>
+
+    <p class="text-gray-600 mb-4">
+      Define los días y rangos de atención. Puedes configurar horarios semanales (por día)
+      o horarios puntuales para una fecha específica. Estos horarios se usan para mostrar
+      las horas disponibles a los clientes.
+    </p>
+
+    <script>
+      const BASE_URL = window.location.origin;
+
+      const token = localStorage.getItem("token");
+      const usuarioRaw = localStorage.getItem("usuario");
+
+      // Si no hay sesión, ir al login
+      if (!token || !usuarioRaw) {
+        window.location.href = "/login.html";
+      }
+
+      const usuario = JSON.parse(usuarioRaw);
+      const PROFESIONAL_ID = usuario.id;
+
+      // Título dinámico con nombre + especialidad
+      window.addEventListener("DOMContentLoaded", () => {
+        const titulo = document.getElementById("tituloHorarios");
+        if (titulo && usuario.nombre) {
+          let texto = `Configurar horarios - ${usuario.nombre}`;
+          if (usuario.especialidad) {
+            texto += ` (${usuario.especialidad})`;
+          }
+          titulo.textContent = texto;
+        }
+      });
+    </script>
+
+    <!-- FORMULARIO AGREGAR HORARIO -->
+    <section class="border rounded-lg p-4 mb-6 bg-gray-50">
+      <h2 class="text-lg font-semibold mb-3">Agregar horario</h2>
+
+      <!-- Tipo de horario -->
+      <div class="mb-4 flex flex-col md:flex-row gap-4">
+        <label class="flex items-center gap-2 text-sm">
+          <input type="radio" name="tipoHorario" value="semanal" checked />
+          <span>Horario semanal (por día de la semana)</span>
+        </label>
+        <label class="flex items-center gap-2 text-sm">
+          <input type="radio" name="tipoHorario" value="puntual" />
+          <span>Horario por fecha específica</span>
+        </label>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+        <!-- Día de la semana -->
+        <div id="campoDiaSemana">
+          <label class="block text-sm font-medium mb-1">Día</label>
+          <select id="diaSemana"
+                  class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500">
+            <option value="">Seleccionar...</option>
+            <option value="1">Lunes</option>
+            <option value="2">Martes</option>
+            <option value="3">Miércoles</option>
+            <option value="4">Jueves</option>
+            <option value="5">Viernes</option>
+            <option value="6">Sábado</option>
+            <option value="0">Domingo</option>
+          </select>
+        </div>
+
+        <!-- Fecha específica -->
+        <div id="campoFechaEspecifica" class="hidden">
+          <label class="block text-sm font-medium mb-1">Fecha específica</label>
+          <input id="fechaEspecifica" type="date"
+                 class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500" />
+        </div>
+
+        <!-- Hora inicio -->
+        <div>
+          <label class="block text-sm font-medium mb-1">Hora inicio</label>
+          <input id="horaInicio" type="time"
+                 class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500" />
+        </div>
+
+        <!-- Hora fin -->
+        <div>
+          <label class="block text-sm font-medium mb-1">Hora fin</label>
+          <input id="horaFin" type="time"
+                 class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500" />
+        </div>
+
+        <!-- Duración -->
+        <div>
+          <label class="block text-sm font-medium mb-1">Duración (minutos)</label>
+          <select id="duracion"
+                  class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500">
+            <option value="30">30</option>
+            <option value="45">45</option>
+            <option value="60" selected>60</option>
+            <option value="90">90</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="mt-4 flex justify-end">
+        <button id="btnGuardarHorario"
+                class="bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-lg">
+          Guardar horario
+        </button>
+      </div>
+
+      <p id="msgHorarios" class="text-sm mt-3"></p>
+    </section>
+
+    <!-- LISTA DE HORARIOS -->
+    <section>
+      <h2 class="text-lg font-semibold mb-3">Horarios configurados</h2>
+
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead>
+          <tr class="bg-gray-100 text-left">
+            <th class="px-3 py-2">Día / Fecha</th>
+            <th class="px-3 py-2">Rango</th>
+            <th class="px-3 py-2">Duración bloque</th>
+            <th class="px-3 py-2">Acciones</th>
+          </tr>
+          </thead>
+          <tbody id="tbodyHorarios">
+          <tr>
+            <td colspan="4" class="px-3 py-4 text-center text-gray-500">
+              Aún no tienes horarios configurados.
+            </td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const diaSemanaSelect = document.getElementById("diaSemana");
+    const fechaEspecificaInput = document.getElementById("fechaEspecifica");
+    const campoDiaSemana = document.getElementById("campoDiaSemana");
+    const campoFechaEspecifica = document.getElementById("campoFechaEspecifica");
+    const horaInicioInput = document.getElementById("horaInicio");
+    const horaFinInput = document.getElementById("horaFin");
+    const duracionSelect = document.getElementById("duracion");
+    const btnGuardarHorario = document.getElementById("btnGuardarHorario");
+    const msgHorarios = document.getElementById("msgHorarios");
+    const tbodyHorarios = document.getElementById("tbodyHorarios");
+    const btnVolverPanel = document.getElementById("btnVolverPanel");
+    const tipoHorarioRadios = document.querySelectorAll('input[name="tipoHorario"]');
+
+    const nombresDias = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+
+    function nombreDia(num) {
+      return nombresDias[num] ?? `Día ${num}`;
+    }
+
+    function formatearFechaDDMMYYYY(iso) {
+      if (!iso) return "";
+      const [y, m, d] = iso.split("-");
+      return `${d}-${m}-${y}`;
+    }
+
+    // Cambiar entre horario semanal y puntual
+    tipoHorarioRadios.forEach((radio) => {
+      radio.addEventListener("change", () => {
+        if (radio.checked && radio.value === "semanal") {
+          campoDiaSemana.classList.remove("hidden");
+          campoFechaEspecifica.classList.add("hidden");
+        }
+        if (radio.checked && radio.value === "puntual") {
+          campoDiaSemana.classList.add("hidden");
+          campoFechaEspecifica.classList.remove("hidden");
+        }
+      });
+    });
+
+    function getTipoHorarioSeleccionado() {
+      const r = document.querySelector('input[name="tipoHorario"]:checked');
+      return r ? r.value : "semanal";
+    }
+
+    // Cargar horarios desde la API
+    async function cargarHorarios() {
+      msgHorarios.textContent = "";
+      msgHorarios.className = "text-sm mt-3";
+
+      tbodyHorarios.innerHTML = `
+        <tr>
+          <td colspan="4" class="px-3 py-4 text-center text-gray-500">
+            Cargando horarios...
+          </td>
+        </tr>
+      `;
+
+      try {
+        const res = await fetch(`${BASE_URL}/horarios/profesional/${PROFESIONAL_ID}`, {
+          headers: {
+            "Authorization": `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
+
+        const horarios = await res.json();
+
+        if (!Array.isArray(horarios) || horarios.length === 0) {
+          tbodyHorarios.innerHTML = `
+            <tr>
+              <td colspan="4" class="px-3 py-4 text-center text-gray-500">
+                Aún no tienes horarios configurados.
+              </td>
+            </tr>
+          `;
+          return;
+        }
+
+        tbodyHorarios.innerHTML = "";
+
+        horarios.forEach((h) => {
+          const tr = document.createElement("tr");
+          tr.className = "border-t";
+
+          // Si tiene fechaEspecifica → mostramos fecha; si no, día de semana
+          let textoDia;
+          if (h.fechaEspecifica) {
+            // ⏰ Horario puntual por fecha
+            textoDia = `${formatearFechaDDMMYYYY(h.fechaEspecifica)}`;
+          } else if (typeof h.diaSemana === "number") {
+            // 📅 Horario semanal (por día de la semana)
+            textoDia = nombreDia(h.diaSemana);
+          } else {
+            // Por si quedó algún registro raro con ambos en null
+            textoDia = "Sin día / fecha";
+          }
+          const duracionMostrar = h.duracionBloque ?? h.duracionMinutos ?? "";
+
+          tr.innerHTML = `
+            <td class="px-3 py-2">${textoDia}</td>
+            <td class="px-3 py-2">${h.horaInicio} - ${h.horaFin}</td>
+            <td class="px-3 py-2">${duracionMostrar} min</td>
+            <td class="px-3 py-2">
+              <button class="bg-red-500 hover:bg-red-600 text-white text-xs px-3 py-1 rounded"
+                      data-id="${h.id}">
+                Eliminar
+              </button>
+            </td>
+          `;
+
+          tbodyHorarios.appendChild(tr);
+        });
+
+      } catch (err) {
+        console.error(err);
+        tbodyHorarios.innerHTML = `
+          <tr>
+            <td colspan="4" class="px-3 py-4 text-center text-red-500">
+              Error cargando horarios. Intenta nuevamente.
+            </td>
+          </tr>
+        `;
+      }
+    }
+
+    // Guardar nuevo horario
+    btnGuardarHorario.addEventListener("click", async () => {
+      msgHorarios.textContent = "";
+      msgHorarios.className = "text-sm mt-3";
+
+      const tipo = getTipoHorarioSeleccionado();
+      const diaSemana = diaSemanaSelect.value;
+      const fechaEspecifica = fechaEspecificaInput.value;
+      const horaInicio = horaInicioInput.value;
+      const horaFin = horaFinInput.value;
+      const duracionBloque = parseInt(duracionSelect.value, 10);
+
+      if (!horaInicio || !horaFin) {
+        msgHorarios.textContent = "Debes indicar hora de inicio y hora de fin.";
+        msgHorarios.classList.add("text-red-500");
+        return;
+      }
+
+      const body = {
+        profesionalId: PROFESIONAL_ID,
+        horaInicio,
+        horaFin,
+        duracionBloque,
+      };
+
+      if (tipo === "semanal") {
+        if (!diaSemana) {
+          msgHorarios.textContent = "Selecciona el día de la semana.";
+          msgHorarios.classList.add("text-red-500");
+          return;
+        }
+        body.diaSemana = Number(diaSemana);
+      } else {
+        if (!fechaEspecifica) {
+          msgHorarios.textContent = "Selecciona la fecha específica.";
+          msgHorarios.classList.add("text-red-500");
+          return;
+        }
+        body.fechaEspecifica = fechaEspecifica; // 'YYYY-MM-DD'
+      }
+
+      try {
+        const res = await fetch(`${BASE_URL}/horarios`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: JSON.stringify(body),
+        });
+
+        if (!res.ok) {
+          console.error("Error creando horario:", await res.text());
+          msgHorarios.textContent = "No se pudo guardar el horario.";
+          msgHorarios.classList.add("text-red-500");
+          return;
+        }
+
+        msgHorarios.textContent = "✅ Horario guardado correctamente.";
+        msgHorarios.classList.add("text-green-600");
+
+        // Limpiar campos
+        diaSemanaSelect.value = "";
+        fechaEspecificaInput.value = "";
+        horaInicioInput.value = "";
+        horaFinInput.value = "";
+
+        cargarHorarios();
+      } catch (err) {
+        console.error(err);
+        msgHorarios.textContent = "Error de conexión. Intenta nuevamente.";
+        msgHorarios.classList.add("text-red-500");
+      }
+    });
+
+    // Eliminar horario
+    tbodyHorarios.addEventListener("click", async (e) => {
+      const btn = e.target.closest("button[data-id]");
+      if (!btn) return;
+
+      const id = btn.dataset.id;
+      if (!confirm("¿Eliminar este horario?")) return;
+
+      try {
+        const res = await fetch(`${BASE_URL}/horarios/${id}`, {
+          method: "DELETE",
+          headers: {
+            "Authorization": `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
+
+        if (!res.ok) {
+          console.error("Error eliminando horario:", await res.text());
+          msgHorarios.textContent = "No se pudo eliminar el horario.";
+          msgHorarios.classList.add("text-red-500");
+          return;
+        }
+
+        msgHorarios.textContent = "✅ Horario eliminado.";
+        msgHorarios.classList.add("text-green-600");
+
+        cargarHorarios();
+      } catch (err) {
+        console.error(err);
+        msgHorarios.textContent = "Error de conexión al eliminar.";
+        msgHorarios.classList.add("text-red-500");
+      }
+    });
+
+    // Volver al panel
+    btnVolverPanel.addEventListener("click", () => {
+      window.location.href = "/panel-profesional.html";
+    });
+
+    // Al cargar la página, traer horarios
+    window.addEventListener("DOMContentLoaded", () => {
+      cargarHorarios();
+    });
+  </script>
+</body>
+</html>

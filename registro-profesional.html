@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Registro profesional - Agenda Profesionales</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+
+  <div class="bg-white shadow-lg rounded-xl p-6 w-full max-w-md">
+    <h1 class="text-2xl font-bold text-green-700 mb-2 text-center">
+      Registro de profesional
+    </h1>
+    <p class="text-gray-600 mb-4 text-center">
+      Crea tu cuenta para administrar tu agenda y horarios.
+    </p>
+
+    <form id="formRegistro" class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium mb-1">Nombre completo</label>
+        <input name="nombre" type="text" required
+               class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500" />
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium mb-1">Correo electrónico</label>
+        <input name="email" type="email" required
+               class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500" />
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium mb-1">Teléfono</label>
+        <input name="telefono" type="tel" required
+               class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500" />
+      </div>
+
+      <!-- 👇 NUEVO CAMPO ESPECIALIDAD -->
+      <div>
+        <label class="block text-sm font-medium mb-1">Especialidad</label>
+        <input name="especialidad" type="text" required
+               class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500"
+               placeholder="Ej: Kinesiólogo, Entrenador de fútbol, Nutricionista..." />
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium mb-1">Contraseña</label>
+        <input name="password" type="password" required minlength="6"
+               class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500" />
+        <p class="text-xs text-gray-500 mt-1">
+          Mínimo 6 caracteres.
+        </p>
+      </div>
+
+      <p id="msgRegistro" class="text-sm text-center"></p>
+
+      <button type="submit"
+              class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-lg">
+        Crear cuenta
+      </button>
+
+      <p class="text-xs text-center text-gray-500 mt-2">
+        ¿Ya tienes cuenta? <a href="/login.html" class="text-green-600 underline">Inicia sesión</a>
+      </p>
+    </form>
+  </div>
+
+  <script>
+    const BASE_URL = window.location.origin;
+    const formRegistro = document.getElementById("formRegistro");
+    const msgRegistro = document.getElementById("msgRegistro");
+
+    formRegistro.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      msgRegistro.textContent = "";
+      msgRegistro.className = "text-sm text-center";
+
+      const formData = new FormData(formRegistro);
+      const nombre = formData.get("nombre");
+      const email = formData.get("email");
+      const telefono = formData.get("telefono");
+      const password = formData.get("password");
+      const especialidad = formData.get("especialidad");
+
+      try {
+        const res = await fetch(`${BASE_URL}/auth/register-profesional`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nombre, email, telefono, password, especialidad }),
+        });
+
+        if (!res.ok) {
+          const error = await res.json().catch(() => ({}));
+          console.error("Error registro:", error);
+          msgRegistro.textContent =
+            error?.message || "No se pudo crear la cuenta. Intenta nuevamente.";
+          msgRegistro.classList.add("text-red-500");
+          return;
+        }
+
+        const data = await res.json();
+        console.log("Profesional creado:", data);
+
+        msgRegistro.textContent = "✅ Cuenta creada correctamente. Redirigiendo al login...";
+        msgRegistro.classList.add("text-green-600");
+
+        setTimeout(() => {
+          window.location.href = "/login.html";
+        }, 1500);
+      } catch (err) {
+        console.error(err);
+        msgRegistro.textContent = "Error de conexión. Intenta nuevamente.";
+        msgRegistro.classList.add("text-red-500");
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Login profesional - Agenda Profesionales</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+
+  <div class="bg-white shadow-lg rounded-xl p-6 w-full max-w-md">
+    <h1 class="text-2xl font-bold text-green-700 mb-2 text-center">
+      Iniciar sesión
+    </h1>
+    <p class="text-gray-600 mb-4 text-center">
+      Ingresa con tu cuenta de profesional para administrar tu agenda.
+    </p>
+
+    <form id="formLogin" class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium mb-1">Correo electrónico</label>
+        <input name="email" type="email" required
+               class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500" />
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium mb-1">Contraseña</label>
+        <input name="password" type="password" required
+               class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500" />
+      </div>
+
+      <p id="msgLogin" class="text-sm text-center"></p>
+
+      <button type="submit"
+              class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-lg">
+        Entrar
+      </button>
+
+      <p class="text-xs text-center text-gray-500 mt-2">
+        ¿Aún no tienes cuenta? <a href="/registro-profesional.html" class="text-green-600 underline">Regístrate</a>
+      </p>
+    </form>
+  </div>
+
+  <script>
+    const BASE_URL = window.location.origin;
+    const formLogin = document.getElementById("formLogin");
+    const msgLogin = document.getElementById("msgLogin");
+
+    formLogin.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      msgLogin.textContent = "";
+      msgLogin.className = "text-sm text-center";
+
+      const formData = new FormData(formLogin);
+      const email = formData.get("email");
+      const password = formData.get("password");
+
+      try {
+        const res = await fetch(`${BASE_URL}/auth/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        });
+
+        if (!res.ok) {
+          const error = await res.json().catch(() => ({}));
+          console.error("Error login:", error);
+          msgLogin.textContent =
+            error?.message || "Credenciales incorrectas o error en el servidor.";
+          msgLogin.classList.add("text-red-500");
+          return;
+        }
+
+        const data = await res.json();
+        console.log("Login OK:", data);
+
+        // 👇 MUY IMPORTANTE: guardamos SOLO el JWT crudo
+        localStorage.setItem("token", data.access_token);
+        localStorage.setItem("usuario", JSON.stringify(data.usuario));
+
+        msgLogin.textContent = "✅ Inicio de sesión correcto. Redirigiendo...";
+        msgLogin.classList.add("text-green-600");
+
+        setTimeout(() => {
+          window.location.href = "/panel-profesional.html";
+        }, 800);
+      } catch (err) {
+        console.error(err);
+        msgLogin.textContent = "Error de conexión. Intenta nuevamente.";
+        msgLogin.classList.add("text-red-500");
+      }
+    });
+  </script>
+</body>
+</html>
