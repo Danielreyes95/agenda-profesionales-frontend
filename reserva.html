@@ -64,9 +64,8 @@
   const params = new URLSearchParams(window.location.search);
   const citaId = params.get("citaId");
 
-  const API_URL = typeof BASE_URL !== "undefined"
-    ? BASE_URL
-    : "https://agenda-profesionales-api.onrender.com"; // fallback
+  // Usa la URL de la API desde config.js si existe, si no, fallback a Render
+  const API_URL = window.API_BASE_URL || "https://agenda-profesionales-api.onrender.com";
 
   const estadoMensaje = document.getElementById("estadoMensaje");
   const cardReserva = document.getElementById("cardReserva");
@@ -141,7 +140,7 @@
     }
   }
 
-  // Cancelar reserva
+  // Cancelar reserva (endpoint público)
   btnCancelar?.addEventListener("click", async () => {
     if (!citaActual) return;
 
@@ -153,10 +152,8 @@
     btnCancelar.classList.add("opacity-60", "cursor-not-allowed");
 
     try {
-      const res = await fetch(`${API_URL}/citas/${citaId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ estadoCita: "cancelada" }),
+      const res = await fetch(`${API_URL}/citas/${citaId}/cancelar-publico`, {
+        method: "PATCH"
       });
 
       if (!res.ok) {
@@ -168,6 +165,7 @@
       estadoCita.classList.add("text-red-600");
       estadoMensaje.textContent = "Tu reserva fue cancelada correctamente.";
 
+      btnCancelar.textContent = "Reserva cancelada";
     } catch (err) {
       console.error(err);
       alert("No se pudo cancelar la reserva. Intenta más tarde.");
