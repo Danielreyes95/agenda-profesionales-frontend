@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Detalle de tu reserva</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+
+<script src="./js/config.js"></script> <!-- ajusta la ruta si va en otra carpeta -->
+
+<div class="min-h-screen flex items-center justify-center px-4">
+  <div class="max-w-xl w-full bg-white rounded-2xl shadow-lg p-6">
+    <h1 class="text-2xl font-bold text-green-700 mb-2">
+      Detalle de tu reserva
+    </h1>
+    <p id="estadoMensaje" class="text-sm text-gray-500 mb-4"></p>
+
+    <!-- Card de la reserva -->
+    <div id="cardReserva" class="hidden border border-gray-200 rounded-xl p-4 bg-gray-50 mb-4">
+      <p class="text-sm text-gray-700">
+        <span class="font-semibold">Profesional:</span>
+        <span id="profesionalNombre"></span>
+      </p>
+      <p id="profesionalEspecialidad" class="text-sm text-gray-700"></p>
+      <p class="text-sm text-gray-700">
+        <span class="font-semibold">Fecha y hora:</span>
+        <span id="fechaHora"></span>
+      </p>
+      <p class="text-sm text-gray-700">
+        <span class="font-semibold">Tipo de pago:</span>
+        <span id="tipoPago"></span>
+      </p>
+      <p class="text-sm text-gray-700">
+        <span class="font-semibold">Estado de la cita:</span>
+        <span id="estadoCita" class="font-semibold"></span>
+      </p>
+    </div>
+
+    <!-- Botones -->
+    <div id="acciones" class="hidden space-y-3">
+      <button id="btnCancelar"
+              class="w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg">
+        Cancelar reserva
+      </button>
+
+      <button id="btnIrAgenda"
+              class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg">
+        Ver agenda del profesional
+      </button>
+    </div>
+
+    <div id="loader" class="flex items-center gap-2 text-sm text-gray-500">
+      <span class="animate-spin h-4 w-4 border-2 border-gray-300 border-t-green-500 rounded-full"></span>
+      Cargando información de tu reserva...
+    </div>
+
+    <p id="errorMsg" class="hidden text-sm text-red-600 mt-3"></p>
+  </div>
+</div>
+
+<script>
+  const params = new URLSearchParams(window.location.search);
+  const citaId = params.get("citaId");
+
+  const API_URL = typeof BASE_URL !== "undefined"
+    ? BASE_URL
+    : "https://agenda-profesionales-api.onrender.com"; // fallback
+
+  const estadoMensaje = document.getElementById("estadoMensaje");
+  const cardReserva = document.getElementById("cardReserva");
+  const loader = document.getElementById("loader");
+  const errorMsg = document.getElementById("errorMsg");
+  const acciones = document.getElementById("acciones");
+  const btnCancelar = document.getElementById("btnCancelar");
+  const btnIrAgenda = document.getElementById("btnIrAgenda");
+
+  const profesionalNombre = document.getElementById("profesionalNombre");
+  const profesionalEspecialidad = document.getElementById("profesionalEspecialidad");
+  const fechaHora = document.getElementById("fechaHora");
+  const tipoPago = document.getElementById("tipoPago");
+  const estadoCita = document.getElementById("estadoCita");
+
+  let citaActual = null;
+
+  if (!citaId) {
+    loader.classList.add("hidden");
+    errorMsg.classList.remove("hidden");
+    errorMsg.textContent = "No se encontró el identificador de la reserva.";
+  } else {
+    cargarCita();
+  }
+
+  async function cargarCita() {
+    try {
+      const res = await fetch(`${API_URL}/citas/${citaId}`);
+      if (!res.ok) {
+        throw new Error("No se pudo cargar la reserva.");
+      }
+      const cita = await res.json();
+      citaActual = cita;
+
+      loader.classList.add("hidden");
+      cardReserva.classList.remove("hidden");
+      acciones.classList.remove("hidden");
+
+      profesionalNombre.textContent = cita.profesional?.nombre || "Sin nombre";
+      profesionalEspecialidad.textContent = cita.profesional?.especialidad
+        ? `Especialidad: ${cita.profesional.especialidad}`
+        : "";
+      fechaHora.textContent = `${cita.fecha} a las ${cita.hora} hrs`;
+      tipoPago.textContent = cita.tipoPago;
+      estadoCita.textContent = cita.estadoCita;
+
+      if (cita.estadoCita === "cancelada") {
+        estadoCita.classList.add("text-red-600");
+        estadoMensaje.textContent = "Esta reserva ya se encuentra cancelada.";
+        btnCancelar.disabled = true;
+        btnCancelar.classList.add("opacity-60", "cursor-not-allowed");
+      } else {
+        estadoCita.classList.add("text-green-600");
+        estadoMensaje.textContent = "Aquí puedes ver y gestionar tu reserva.";
+      }
+
+      // botón ir a agenda
+      if (cita.profesional?.id) {
+        btnIrAgenda.onclick = () => {
+          window.location.href = `agendar.html?profesionalId=${cita.profesional.id}`;
+        };
+      } else {
+        btnIrAgenda.disabled = true;
+        btnIrAgenda.classList.add("opacity-60", "cursor-not-allowed");
+      }
+
+    } catch (err) {
+      loader.classList.add("hidden");
+      errorMsg.classList.remove("hidden");
+      errorMsg.textContent = "Ocurrió un problema al cargar tu reserva.";
+      console.error(err);
+    }
+  }
+
+  // Cancelar reserva
+  btnCancelar?.addEventListener("click", async () => {
+    if (!citaActual) return;
+
+    const ok = confirm("¿Seguro que quieres cancelar esta reserva?");
+    if (!ok) return;
+
+    btnCancelar.disabled = true;
+    btnCancelar.textContent = "Cancelando...";
+    btnCancelar.classList.add("opacity-60", "cursor-not-allowed");
+
+    try {
+      const res = await fetch(`${API_URL}/citas/${citaId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ estadoCita: "cancelada" }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Error al cancelar la reserva.");
+      }
+
+      estadoCita.textContent = "cancelada";
+      estadoCita.classList.remove("text-green-600");
+      estadoCita.classList.add("text-red-600");
+      estadoMensaje.textContent = "Tu reserva fue cancelada correctamente.";
+
+    } catch (err) {
+      console.error(err);
+      alert("No se pudo cancelar la reserva. Intenta más tarde.");
+      btnCancelar.disabled = false;
+      btnCancelar.textContent = "Cancelar reserva";
+      btnCancelar.classList.remove("opacity-60", "cursor-not-allowed");
+    }
+  });
+</script>
+
+</body>
+</html>
