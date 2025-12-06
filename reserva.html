@@ -11,7 +11,7 @@
 <script src="./js/config.js"></script> <!-- ajusta la ruta si va en otra carpeta -->
 
 <div class="min-h-screen flex items-center justify-center px-4">
-  <div class="max-w-xl w-full bg-white rounded-2xl shadow-lg p-6">
+  <div class="max-w-xl w-full bg-white rounded-2xl shadow-lg p-6 relative">
     <h1 class="text-2xl font-bold text-green-700 mb-2">
       Detalle de tu reserva
     </h1>
@@ -41,12 +41,12 @@
     <!-- Botones -->
     <div id="acciones" class="hidden space-y-3">
       <button id="btnCancelar"
-              class="w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg">
+              class="w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg transition">
         Cancelar reserva
       </button>
 
       <button id="btnIrAgenda"
-              class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg">
+              class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition">
         Ver agenda del profesional
       </button>
     </div>
@@ -57,6 +57,30 @@
     </div>
 
     <p id="errorMsg" class="hidden text-sm text-red-600 mt-3"></p>
+  </div>
+</div>
+
+<!-- Modal de confirmación de cancelación -->
+<div id="modalConfirmCancel"
+     class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 hidden">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 p-5">
+    <h2 class="text-lg font-semibold text-gray-900 mb-2">
+      Cancelar reserva
+    </h2>
+    <p class="text-sm text-gray-600 mb-4">
+      ¿Seguro que quieres cancelar esta reserva? Esta acción no se puede deshacer.
+    </p>
+
+    <div class="flex flex-col sm:flex-row gap-2 justify-end">
+      <button id="btnConfirmNo"
+              class="flex-1 sm:flex-none px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-50">
+        No, conservar reserva
+      </button>
+      <button id="btnConfirmYes"
+              class="flex-1 sm:flex-none px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700">
+        Sí, cancelar
+      </button>
+    </div>
   </div>
 </div>
 
@@ -80,6 +104,11 @@
   const fechaHora = document.getElementById("fechaHora");
   const tipoPago = document.getElementById("tipoPago");
   const estadoCita = document.getElementById("estadoCita");
+
+  // Modal confirm
+  const modalConfirm = document.getElementById("modalConfirmCancel");
+  const btnConfirmYes = document.getElementById("btnConfirmYes");
+  const btnConfirmNo = document.getElementById("btnConfirmNo");
 
   let citaActual = null;
 
@@ -140,16 +169,24 @@
     }
   }
 
-  // Cancelar reserva (endpoint público)
-  btnCancelar?.addEventListener("click", async () => {
+  // Abrir modal de confirmación
+  btnCancelar?.addEventListener("click", () => {
+    if (!citaActual || citaActual.estadoCita === "cancelada") return;
+    modalConfirm.classList.remove("hidden");
+  });
+
+  // Cerrar modal sin cancelar
+  btnConfirmNo?.addEventListener("click", () => {
+    modalConfirm.classList.add("hidden");
+  });
+
+  // Confirmar cancelación
+  btnConfirmYes?.addEventListener("click", async () => {
     if (!citaActual) return;
 
-    const ok = confirm("¿Seguro que quieres cancelar esta reserva?");
-    if (!ok) return;
-
-    btnCancelar.disabled = true;
-    btnCancelar.textContent = "Cancelando...";
-    btnCancelar.classList.add("opacity-60", "cursor-not-allowed");
+    btnConfirmYes.disabled = true;
+    btnConfirmYes.textContent = "Cancelando...";
+    btnConfirmYes.classList.add("opacity-80", "cursor-wait");
 
     try {
       const res = await fetch(`${API_URL}/citas/${citaId}/cancelar-publico`, {
@@ -160,18 +197,32 @@
         throw new Error("Error al cancelar la reserva.");
       }
 
+      // Actualiza UI
       estadoCita.textContent = "cancelada";
       estadoCita.classList.remove("text-green-600");
       estadoCita.classList.add("text-red-600");
       estadoMensaje.textContent = "Tu reserva fue cancelada correctamente.";
 
+      btnCancelar.disabled = true;
       btnCancelar.textContent = "Reserva cancelada";
+      btnCancelar.classList.add("opacity-60", "cursor-not-allowed");
+
+      modalConfirm.classList.add("hidden");
     } catch (err) {
       console.error(err);
-      alert("No se pudo cancelar la reserva. Intenta más tarde.");
-      btnCancelar.disabled = false;
-      btnCancelar.textContent = "Cancelar reserva";
-      btnCancelar.classList.remove("opacity-60", "cursor-not-allowed");
+      errorMsg.classList.remove("hidden");
+      errorMsg.textContent = "No se pudo cancelar la reserva. Intenta más tarde.";
+      modalConfirm.classList.add("hidden");
+      btnConfirmYes.disabled = false;
+      btnConfirmYes.textContent = "Sí, cancelar";
+      btnConfirmYes.classList.remove("cursor-wait", "opacity-80");
+    }
+  });
+
+  // Cerrar modal si se hace click fuera del cuadro
+  modalConfirm.addEventListener("click", (e) => {
+    if (e.target === modalConfirm) {
+      modalConfirm.classList.add("hidden");
     }
   });
 </script>
