@@ -66,8 +66,8 @@
         return origin + basePath; // https://danielreyes95.github.io/agenda-profesionales-frontend
       }
 
-      // Actualizar título con nombre y especialidad + link público
-      window.addEventListener("DOMContentLoaded", () => {
+      // Actualizar título, link público, APK y precargar datos de transferencia
+      window.addEventListener("DOMContentLoaded", async () => {
         const titulo = document.getElementById("tituloPanel");
         if (titulo && usuario.nombre) {
           let texto = `Panel de agenda - ${usuario.nombre}`;
@@ -87,6 +87,42 @@
         const linkApk = document.getElementById("linkDescargarApk");
         if (linkApk) {
           linkApk.href = APK_URL;
+        }
+
+        // 👉 Cargar datos de transferencia desde el backend
+        try {
+          const res = await fetch(`${BASE_URL}/profesionales/${PROFESIONAL_ID}`);
+          if (!res.ok) throw new Error("No se pudo obtener profesional");
+          const profesional = await res.json();
+
+          // Guardar en localStorage la versión más fresca
+          try {
+            localStorage.setItem("usuario", JSON.stringify(profesional));
+          } catch (_) {}
+
+          const dt = profesional.datosTransferencia || {};
+          const txTitularNombre = document.getElementById("txTitularNombre");
+          const txRut = document.getElementById("txRut");
+          const txBanco = document.getElementById("txBanco");
+          const txTipoCuenta = document.getElementById("txTipoCuenta");
+          const txNumeroCuenta = document.getElementById("txNumeroCuenta");
+          const txMontoSugerido = document.getElementById("txMontoSugerido");
+          const txComentarioSugerido = document.getElementById("txComentarioSugerido");
+
+          if (txTitularNombre) txTitularNombre.value = dt.titularNombre || "";
+          if (txRut) txRut.value = dt.rut || "";
+          if (txBanco) txBanco.value = dt.banco || "";
+          if (txTipoCuenta) txTipoCuenta.value = dt.tipoCuenta || "";
+          if (txNumeroCuenta) txNumeroCuenta.value = dt.numeroCuenta || "";
+          if (txMontoSugerido) txMontoSugerido.value = dt.montoSugerido || "";
+          if (txComentarioSugerido) txComentarioSugerido.value = dt.comentarioSugerido || "";
+        } catch (err) {
+          console.error("Error cargando datos de transferencia:", err);
+          const msg = document.getElementById("msgTransferencia");
+          if (msg) {
+            msg.textContent = "No se pudieron cargar tus datos de transferencia.";
+            msg.className = "text-xs mt-2 text-red-600";
+          }
         }
       });
     </script>
@@ -112,6 +148,113 @@
           Copiar link
         </button>
       </div>
+    </div>
+
+    <!-- 💰 DATOS DE TRANSFERENCIA (NUEVO BLOQUE) -->
+    <div class="mb-4 p-4 bg-yellow-50 border border-yellow-100 rounded-lg">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-3">
+        <div>
+          <p class="text-sm font-semibold text-yellow-800">
+            Datos de transferencia para tus pacientes
+          </p>
+          <p class="text-xs text-yellow-700">
+            Estos datos aparecerán en la pantalla de agendamiento cuando el paciente elija pago por transferencia.
+          </p>
+        </div>
+        <button
+          id="btnGuardarTransferencia"
+          class="text-xs bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-2 rounded font-semibold">
+          Guardar datos de transferencia
+        </button>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">
+            Nombre titular
+          </label>
+          <input
+            id="txTitularNombre"
+            type="text"
+            class="w-full border rounded-lg px-3 py-2 text-sm"
+            placeholder="Ej: Daniel Reyes Parra"
+          />
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">
+            RUT
+          </label>
+          <input
+            id="txRut"
+            type="text"
+            class="w-full border rounded-lg px-3 py-2 text-sm"
+            placeholder="Ej: 19.204.129-5"
+          />
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">
+            Banco
+          </label>
+          <input
+            id="txBanco"
+            type="text"
+            class="w-full border rounded-lg px-3 py-2 text-sm"
+            placeholder="Ej: Banco Estado"
+          />
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">
+            Tipo de cuenta
+          </label>
+          <input
+            id="txTipoCuenta"
+            type="text"
+            class="w-full border rounded-lg px-3 py-2 text-sm"
+            placeholder="Ej: Cuenta RUT / Vista"
+          />
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">
+            N° de cuenta
+          </label>
+          <input
+            id="txNumeroCuenta"
+            type="text"
+            class="w-full border rounded-lg px-3 py-2 text-sm"
+            placeholder="Ej: 19204129"
+          />
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">
+            Monto sugerido (opcional)
+          </label>
+          <input
+            id="txMontoSugerido"
+            type="text"
+            class="w-full border rounded-lg px-3 py-2 text-sm"
+            placeholder="Ej: $15.000"
+          />
+        </div>
+      </div>
+
+      <div class="mt-2">
+        <label class="block text-xs font-medium text-gray-700 mb-1">
+          Comentario sugerido (opcional)
+        </label>
+        <textarea
+          id="txComentarioSugerido"
+          rows="2"
+          class="w-full border rounded-lg px-3 py-2 text-sm"
+          placeholder='Ej: "Reserva agenda".'
+        ></textarea>
+      </div>
+
+      <p id="msgTransferencia" class="text-xs mt-2"></p>
     </div>
 
     <!-- 📲 DESCARGA APP ANDROID + QR -->
@@ -267,6 +410,17 @@
     const selectEstado = document.getElementById("selectEstado");
     const btnModoDia = document.getElementById("btnModoDia");
     const btnModoFuturas = document.getElementById("btnModoFuturas");
+
+    // NUEVO: elementos de datos de transferencia
+    const btnGuardarTransferencia = document.getElementById("btnGuardarTransferencia");
+    const txTitularNombre = document.getElementById("txTitularNombre");
+    const txRut = document.getElementById("txRut");
+    const txBanco = document.getElementById("txBanco");
+    const txTipoCuenta = document.getElementById("txTipoCuenta");
+    const txNumeroCuenta = document.getElementById("txNumeroCuenta");
+    const txMontoSugerido = document.getElementById("txMontoSugerido");
+    const txComentarioSugerido = document.getElementById("txComentarioSugerido");
+    const msgTransferencia = document.getElementById("msgTransferencia");
 
     // QR modal
     const btnMostrarQR = document.getElementById("btnMostrarQR");
@@ -580,6 +734,79 @@
           msgPanel.textContent =
             "No se pudo copiar el link, cópialo manualmente.";
           msgPanel.className = "text-sm mb-3 text-red-500";
+        }
+      });
+    }
+
+    // 💾 Guardar datos de transferencia
+    if (btnGuardarTransferencia) {
+      btnGuardarTransferencia.addEventListener("click", async () => {
+        if (!txTitularNombre || !txBanco || !txTipoCuenta || !txNumeroCuenta) {
+          if (msgTransferencia) {
+            msgTransferencia.textContent =
+              "Completa al menos nombre, banco, tipo de cuenta y número de cuenta.";
+            msgTransferencia.className = "text-xs mt-2 text-red-600";
+          }
+          return;
+        }
+
+        const payload = {
+          titularNombre: txTitularNombre.value.trim(),
+          rut: txRut ? txRut.value.trim() : "",
+          banco: txBanco.value.trim(),
+          tipoCuenta: txTipoCuenta.value.trim(),
+          numeroCuenta: txNumeroCuenta.value.trim(),
+          montoSugerido: txMontoSugerido ? txMontoSugerido.value.trim() : "",
+          comentarioSugerido: txComentarioSugerido
+            ? txComentarioSugerido.value.trim()
+            : "",
+        };
+
+        if (msgTransferencia) {
+          msgTransferencia.textContent = "Guardando datos de transferencia...";
+          msgTransferencia.className = "text-xs mt-2 text-gray-600";
+        }
+
+        try {
+          const res = await fetch(
+            `${BASE_URL}/profesionales/${PROFESIONAL_ID}/datos-transferencia`,
+            {
+              method: "PATCH",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${localStorage.getItem("token")}`,
+              },
+              body: JSON.stringify(payload),
+            }
+          );
+
+          if (!res.ok) {
+            console.error("Error guardando datos de transferencia:", await res.text());
+            if (msgTransferencia) {
+              msgTransferencia.textContent =
+                "No se pudieron guardar los datos de transferencia.";
+              msgTransferencia.className = "text-xs mt-2 text-red-600";
+            }
+            return;
+          }
+
+          const actualizado = await res.json();
+          try {
+            localStorage.setItem("usuario", JSON.stringify(actualizado));
+          } catch (_) {}
+
+          if (msgTransferencia) {
+            msgTransferencia.textContent =
+              "✅ Datos de transferencia guardados correctamente.";
+            msgTransferencia.className = "text-xs mt-2 text-green-700";
+          }
+        } catch (err) {
+          console.error(err);
+          if (msgTransferencia) {
+            msgTransferencia.textContent =
+              "Error de conexión al guardar los datos.";
+            msgTransferencia.className = "text-xs mt-2 text-red-600";
+          }
         }
       });
     }
